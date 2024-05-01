@@ -6,7 +6,7 @@ class Schedule(CSP):
         super().__init__(
             variables=classes, # To be assigned values (rooms, time)
             domains={cls: [(room, time) for room in rooms for time in times] for cls in classes}, # Possible values for the variables
-            neighbors={cls: [other for other in classes if other != cls] for cls in classes}, # Class neighbors are in the same year
+            neighbors={cls: [other for other in classes if other != cls and check_class_year(cls) == check_class_year(other)] for cls in classes}, # Class neighbors are in the same year
             constraints=self.schedule_constraints
         )
         if initial_assignment:

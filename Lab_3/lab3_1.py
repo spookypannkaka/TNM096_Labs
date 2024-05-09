@@ -1,5 +1,4 @@
 import random
-import copy
 
 class Clause:
     def __init__(self, literals=None, empty=False):
@@ -136,4 +135,18 @@ final_kb = solver(KB)
 
 # Output the result
 for clause in final_kb:
+    print(clause)
+
+# Robbery
+robbery_kb = {Clause(["A", "B", "C"]), # Nobody else could have been involved other than A, B and C.
+              Clause(["A", "~C"]), # C never commits a crime without A’s participation.
+              Clause(["~B", "A", "C"]) # B does not know how to drive. -> B cannot commit a crime without A or C
+             }
+
+# Run the solver to process these clauses
+final_kb_robbery = solver(robbery_kb)
+
+# Output the result
+print("Final Knowledge Base for the Robbery Scenario:")
+for clause in final_kb_robbery:
     print(clause)

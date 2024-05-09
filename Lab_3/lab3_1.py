@@ -1,28 +1,43 @@
 import random
 import copy
-#from sympy import subsets
 
 class Clause:
-    def __init__(self, arg=None, empty=False):
+    def __init__(self, literals=None, empty=False):
         self.p = set() # Positive literals
         self.n = set() # Negative literals
-        if not empty and arg is not None:
-            self.__parse(arg)
+        if literals and not empty:
+            self.__parse(literals)
 
-    def __parse(self, arg):
-        for a in arg:
-            if a.startswith('~'):
-                self.n.add(a.strip('~'))
-            else:
-                self.p.add(a)
+    def __parse(self, literals):
+        # Properly handle literals parsing to avoid empty strings or incorrect entries
+        for literal in literals:
+            literal = literal.strip()
+            if literal.startswith('~'):
+                self.n.add(literal.strip('~'))
+            elif literal:
+                self.p.add(literal)
+
+    def __str__(self):
+        # Ensure that the string output doesn't have trailing commas or show empty sets incorrectly
+        positive_literals = ', '.join(sorted(self.p)) if self.p else ''
+        negative_literals = ', '.join('~' + x for x in sorted(self.n)) if self.n else ''
+        if positive_literals and negative_literals:
+            return f"{{{positive_literals}, {negative_literals}}}"
+        else:
+            return f"{{{positive_literals}{negative_literals}}}"
 
 
 def resolution(A, B):
+    print(f"Attempting to resolve between {A} and {B}")
     C = Clause()
 
     # Check if there are opposite literals in the set, if there are then resolve
     if not A.p.intersection(B.n) and not A.n.intersection(B.p):
+        print("No resolution possible")
         return False
+    
+    new_p = set(A.p)
+    new_n = set(A.n)
     
     # Choose one of the intersections to proceed with
     if A.p.intersection(B.n):
@@ -30,28 +45,35 @@ def resolution(A, B):
         literal = random.choice(list(A.p.intersection(B.n)))
     
         # Remove element from both clauses
-        B.n.remove(literal)
-        A.p.remove(literal)
-    else: # Do the opposite
+        new_p.remove(literal)
+        new_n.update(B.n - {literal})
+        new_p.update(B.p)
+    
+    elif A.n.intersection(B.p): # Do the opposite
         literal = random.choice(list(A.n.intersection(B.p)))
 
-        A.n.remove(literal)
-        B.p.remove(literal)
+        new_n.remove(literal)  # Remove from new negative
+        new_p.update(B.p - {literal})  # Union with adjusted positives from B
+        new_n.update(B.n)  # Union negatives from B
 
     # Put all the positive and negative elements from A and B into positive and negative parts of C
-    C.p = A.p.union(B.p)
-    C.n = A.n.union(B.n)
+    C.p = new_p
+    C.n = new_n
 
     # Tautology C.p = A, C.n = A
     if C.p.intersection(C.n):
+        print("Resulting clause is a tautology")
         return False
     
+    print(f"Resolved clause: {C}")
     return C
 
 def solver(KB):
     KB_set = set(KB)
     S = set() # Temporary clauses
     KB_prime = set() # Previous state of kb
+
+    KB = incorporate(KB, set())
 
     while True:
         S = set()
@@ -60,33 +82,41 @@ def solver(KB):
         # Derive new clauses by iterating through all pairs of clauses
         for A in KB:
             for B in KB:
-                if A != B:  # Ensure A and B are different clauses
-                    C = resolution(A, B)
-                    if C is not False:
-                        S.add(C)
+                C = resolution(A, B)
+                if C is not False:
+                    S.add(C)
 
         if not S:
+            print("No new clauses derived")
             return KB
 
         
         KB = incorporate(S, KB)
         if KB_prime == KB:
+            print("No change in knowledge base; stopping")
             break
 
+    print("Final knowledge base:")
+    for clause in KB:
+        print(clause)
     return KB
 
 def incorporate_clause(A, KB):
     for B in KB:
-        if B.issubset(A):
+        if B.p <= A.p and B.n <= A.n:
             return KB
+
+    # If no clause subsumes A, prepare to add A to KB
+    KB_set = set(KB)  # Create a copy of KB to modify
+    for B in list(KB_set):
+        # Check if A subsumes B
+        if A.p <= B.p and A.n <= B.n:
+            # Remove B as it is subsumed by A
+            KB_set.remove(B)
     
-    KB_prime = KB.copy()  # Create a copy of KB to iterate over and modify
-    for B in KB:
-        if A.issubset(B):
-            KB_prime.remove(B)
-    
-    KB_prime.add(A)
-    return KB_prime
+    # Add A to KB since it wasn't subsumed by any clause in KB
+    KB_set.add(A)
+    return KB_set
 
 def incorporate(S, KB):
     KB_set = set(KB)
@@ -94,54 +124,16 @@ def incorporate(S, KB):
         KB_set = incorporate_clause(clause, KB_set)
     return list(KB_set)
 
+KB = {Clause(["~sun", "~money", "ice"]), 
+      Clause(["~money", "ice", "movie"]),
+      Clause(["~movie", "money"]),
+      Clause(["~movie", "~ice"]),
+      Clause(["sun", "money", "cry"]),
+      Clause(["movie"])
+     }
 
-'''KB = {}
+final_kb = solver(KB)
 
-A = Clause(["a", "b"])
-B = Clause(["~a", "c"])
-C = Clause(["~b"])
-KB = [A, B, C]
-
-result_kb = solver(KB)
-
-D = Clause(["a"])
-E = Clause(["~a"])
-KB = [A, B, C, D, E]
-
-result_kb = solver(KB)'''
-
-##
-
-KB = set()
-
-A = Clause()
-A.n = set(['sun', 'money'])
-A.p = set(['ice'])
-
-B = Clause()
-B.n = set(['money'])
-B.p = set(['ice','movie'])
-
-C = Clause()
-C.n = set(['movie'])
-C.p = set(['money'])
-
-D = Clause()
-D.n = set(['movie', 'ice'])
-
-E = Clause()
-E.p = set(['sun', 'money', 'cry'])
-
-'''A = Clause(["ice", "sun"])
-B = Clause(["~money", "ice", "movie"])
-C = Clause(["~movie", "money"])
-D = Clause(["~movie", "~ice"])
-E = Clause(["sun", "money", "cry"])'''
-
-incorporate_clause(A, KB)
-incorporate_clause(B, KB)
-incorporate_clause(C, KB)
-incorporate_clause(D, KB)
-incorporate_clause(E, KB)
-
-solver(KB)
+# Output the result
+for clause in final_kb:
+    print(clause)

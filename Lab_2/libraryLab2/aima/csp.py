@@ -278,20 +278,27 @@ def backtracking_search(csp,
 
 
 def min_conflicts(csp, max_steps=100000):
+    step_counter = 0
     """Solve a CSP by stochastic hillclimbing on the number of conflicts."""
     # Generate a complete assignment for all variables (probably with conflicts)
     csp.current = current = {}
     for var in csp.variables:
+        print("Step from complete assignment")
+        step_counter+=1
         val = min_conflicts_value(csp, var, current)
         csp.assign(var, val, current)
     # Now repeatedly choose a random conflicted variable and change it
     for i in range(max_steps):
+        print("Step in random loop")
+        step_counter+=1
         conflicted = csp.conflicted_vars(current)
         if not conflicted:
+            print("Step counter: ", step_counter)
             return current
         var = random.choice(conflicted)
         val = min_conflicts_value(csp, var, current)
         csp.assign(var, val, current)
+    print("Step counter: ", step_counter)
     return None
 
 

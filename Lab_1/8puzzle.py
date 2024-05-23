@@ -9,7 +9,7 @@ class Node:
         self.parent = parent
         self.action = action  # The move made to get to this state from the parent state
         self.g = depth
-        self.h = self.h2()
+        self.h = self.h1()
         self.f = self.g + self.h
 
     # h1 is a function that returns the current number of misplaced tiles

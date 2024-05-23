@@ -27,6 +27,9 @@ class Clause:
 
 
 def resolution(A, B):
+    if A == B:
+        return False
+
     print(f"Attempting to resolve between {A} and {B}")
     C = Clause()
 
@@ -68,9 +71,9 @@ def resolution(A, B):
     return C
 
 def solver(KB):
-    KB_set = set(KB)
     S = set() # Temporary clauses
     KB_prime = set() # Previous state of kb
+    attempts = set()
 
     KB = incorporate(KB, set())
 
@@ -81,9 +84,12 @@ def solver(KB):
         # Derive new clauses by iterating through all pairs of clauses
         for A in KB:
             for B in KB:
-                C = resolution(A, B)
-                if C is not False:
-                    S.add(C)
+                if A != B and (A, B) not in attempts:
+                    attempts.add((A, B))
+                    attempts.add((B, A))
+                    C = resolution(A, B)
+                    if C is not False:
+                        S.add(C)
 
         if not S:
             print("No new clauses derived")
@@ -140,7 +146,13 @@ for clause in final_kb:
 # Robbery
 robbery_kb = {Clause(["A", "B", "C"]), # Nobody else could have been involved other than A, B and C.
               Clause(["A", "~C"]), # C never commits a crime without A’s participation.
-              Clause(["~B", "A", "C"]) # B does not know how to drive. -> B cannot commit a crime without A or C
+
+              Clause(["dA", "dB", "dC"]), # The robbers left in a truck, only A, B, C could commit the crime, therefore one drove
+              Clause(["~dB"]), # B does not know how to drive.
+              Clause(["~dA", "A"]), # If A drove, A is guilty.
+              Clause(["~dB", "B"]),
+              Clause(["~dC", "C"]) # If C drove, C is guilty.
+
              }
 
 # Run the solver to process these clauses
